@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TGA AI Sales Commander</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Literata:opsz,wght@7..72,560&display=swap" rel="stylesheet">
+  <script>
+    (function () {
+      var stored = localStorage.getItem("tga-theme");
+      var theme = stored || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme = theme === "dark" ? "dark" : "light";
+    })();
+  </script>
+  <style>
+    :root {
+      --bg: #e8edf2;
+      --surface: #ffffff;
+      --inset: #f4f7fa;
+      --ink: #15202b;
+      --quiet: #5b6b7c;
+      --line: #d5dee7;
+      --accent: #173f66;
+      --on-accent: #ffffff;
+      --warn: #8a5a12;
+      --alert: #8e3228;
+      --focus: #2f6ea5;
+    }
+    [data-theme="dark"] {
+      --bg: #0e1318;
+      --surface: #171e26;
+      --inset: #12181f;
+      --ink: #e6edf3;
+      --quiet: #a8b6c4;
+      --line: #2c3846;
+      --accent: #e6edf3;
+      --on-accent: #12181f;
+      --warn: #e4bc74;
+      --alert: #f0b0a8;
+      --focus: #8eb6de;
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      font-size: 15.5px;
+      line-height: 1.45;
+    }
+    button, textarea, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    button:disabled { opacity: 0.38; cursor: not-allowed; }
+    button:focus-visible, textarea:focus-visible, input:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+    .sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .brand { margin: 0; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; }
+    .brand span { font-weight: 400; color: var(--quiet); }
+    .theme { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .theme button {
+      background: transparent;
+      border: 0;
+      color: var(--quiet);
+      padding: 0.4rem 0.75rem;
+    }
+    .theme button[aria-pressed="true"] {
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+    main { max-width: 1180px; margin: 0 auto; padding: 1.25rem; }
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: 1rem;
+      align-items: start;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1.15rem 1.2rem 1.25rem;
+    }
+    .floor { margin-bottom: 1rem; }
+    .floor-banner {
+      margin: 0 0 0.9rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: 8px;
+      background: var(--inset);
+      border: 1px solid var(--line);
+    }
+    .floor-banner.stuck { color: var(--alert); border-color: var(--alert); }
+    .boss { display: flex; justify-content: center; margin-bottom: 0.7rem; }
+    .boss .person { width: min(100%, 280px); }
+    .people {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.7rem;
+    }
+    .person {
+      text-align: left;
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.75rem 0.7rem 0.85rem;
+    }
+    .person[aria-pressed="true"] { border-color: var(--focus); }
+    .person .figure {
+      width: 28px;
+      height: 36px;
+      margin-bottom: 0.55rem;
+    }
+    .person .head, .person .body {
+      display: block;
+      margin: 0 auto;
+      background: var(--quiet);
+    }
+    .person .head { width: 14px; height: 14px; border-radius: 50%; }
+    .person .body { width: 22px; height: 18px; margin-top: 3px; border-radius: 8px 8px 4px 4px; }
+    .person.working .head, .person.working .body { background: var(--focus); }
+    .person.waiting .head, .person.waiting .body { background: var(--warn); }
+    .person.stuck .head, .person.stuck .body { background: var(--alert); }
+    .person.done .head, .person.done .body { background: var(--accent); }
+    .person strong { display: block; font-size: 0.95rem; }
+    .person .state { display: block; color: var(--quiet); font-size: 0.82rem; margin: 0.15rem 0 0.35rem; }
+    .person.stuck .state { color: var(--alert); }
+    .person p { margin: 0; font-size: 0.86rem; }
+    .person .where { margin-top: 0.35rem; color: var(--alert); }
+    h1, h2 { font-weight: 600; letter-spacing: -0.03em; margin: 0 0 0.35rem; }
+    h1 { font-size: 1.55rem; line-height: 1.2; max-width: 22ch; }
+    h2 { font-size: 1.2rem; }
+    .lead, .quiet { color: var(--quiet); }
+    .lead { margin: 0 0 1rem; max-width: 46ch; }
+    textarea, input[type="text"], input[type="number"], input:not([type]) {
+      width: 100%;
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.7rem 0.75rem;
+    }
+    textarea {
+      min-height: 9.5rem;
+      resize: vertical;
+      font-family: Literata, Georgia, serif;
+      font-size: 1.12rem;
+      line-height: 1.45;
+    }
+    textarea::placeholder { color: var(--quiet); }
+    #search-url { font-size: 0.86rem; color: var(--quiet); margin-top: 0.75rem; }
+    .actions, .examples { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    button.primary {
+      background: var(--accent);
+      color: var(--on-accent);
+      border: 0;
+      border-radius: 8px;
+      padding: 0.62rem 0.9rem;
+      font-weight: 500;
+    }
+    button.quiet, .examples button, button.approve {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.55rem 0.75rem;
+    }
+    .pair { margin: 0.15rem 0; }
+    .pair span { color: var(--quiet); }
+    .counts {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      margin: 1rem 0 0.6rem;
+    }
+    .counts div {
+      background: var(--inset);
+      border-radius: 8px;
+      padding: 0.55rem 0.65rem;
+    }
+    .counts strong { display: block; font-size: 1.25rem; font-weight: 600; }
+    .counts span { color: var(--quiet); font-size: 0.82rem; }
+    .progress { height: 3px; background: var(--line); border-radius: 99px; margin-bottom: 0.8rem; }
+    .progress span { display: block; height: 100%; width: 0; background: var(--focus); border-radius: 99px; }
+    .warn { color: var(--warn); }
+    .error { color: var(--alert); }
+    #error-log { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+    .stack { margin-top: 1rem; }
+    .entry, .template {
+      display: grid;
+      gap: 0.15rem;
+      padding: 0.85rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .entry p, .template p { margin: 0; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 0.45rem 0.35rem 0.45rem 0; vertical-align: middle; border-bottom: 1px solid var(--line); }
+    td:first-child { width: 34%; color: var(--quiet); }
+    #defaults input { padding: 0.4rem 0.55rem; }
+    @media (max-width: 860px) {
+      .workspace { grid-template-columns: 1fr; }
+      .boss .person { width: 100%; }
+      .people { grid-template-columns: 1fr 1fr; }
+      .counts { grid-template-columns: 1fr 1fr; }
+      h1 { max-width: none; }
+      .brand span { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <p class="brand">TGA AI Sales Commander <span>prospección</span></p>
+    <div class="theme" role="group" aria-label="Tema">
+      <button type="button" data-set-theme="light" id="theme-light">Claro</button>
+      <button type="button" data-set-theme="dark" id="theme-dark">Oscuro</button>
+    </div>
+  </header>
+  <main>
+    <section class="panel floor" id="agent-floor">
+      <h2>Agentes</h2>
+      <p class="lead">El supervisor está arriba. Se fija que el resto labure y apaga el incendio del que se traba.</p>
+      <p id="floor-banner" class="floor-banner">Cargando el piso.</p>
+      <div class="boss" id="boss"></div>
+      <div class="people" id="people"></div>
+    </section>
+    <div class="workspace">
+      <section class="panel">
+        <h1>¿Qué prospectos necesitás encontrar hoy?</h1>
+        <p class="lead">Escribí el pedido. Los filtros aparecen antes de iniciar, y una importación solo cuenta si Surfe y HubSpot la confirman.</p>
+        <label class="sr" for="instruction">Pedido</label>
+        <textarea id="instruction" placeholder="Necesito 200 contactos de empresas farmacéuticas de Chile, con más de 500 empleados, que trabajen en Recursos Humanos o Capacitación."></textarea>
+        <div class="examples" id="examples"></div>
+        <div class="actions">
+          <button class="primary" id="prepare" type="button">Preparar esta búsqueda</button>
+          <button class="quiet" id="use-default" type="button">Usar configuración predeterminada</button>
+        </div>
+      </section>
+
+      <section class="panel" id="review">
+        <h2>Filtros interpretados</h2>
+        <p id="empty-review" class="quiet">Prepará un pedido para ver los filtros de esta búsqueda.</p>
+        <div id="review-body" hidden>
+          <p id="mode" class="quiet"></p>
+          <div id="filters"></div>
+          <p id="warnings" class="warn"></p>
+          <p id="notes" class="quiet"></p>
+          <label class="sr" for="search-url">URL de Sales Navigator</label>
+          <input id="search-url" readonly>
+          <div class="actions">
+            <button class="primary" id="start" type="button">Iniciar búsqueda</button>
+            <button class="quiet" id="pause" type="button">Pausar</button>
+            <button class="quiet" id="resume" type="button">Reanudar</button>
+            <button class="quiet" id="stop" type="button">Detener</button>
+            <button class="quiet" id="save-template" type="button">Guardar plantilla</button>
+          </div>
+          <div class="counts">
+            <div><strong id="found">0</strong><span>Encontrados</span></div>
+            <div><strong id="imported">0</strong><span>Importados</span></div>
+            <div><strong id="skipped">0</strong><span>Omitidos</span></div>
+            <div><strong id="error-count">0</strong><span>Errores</span></div>
+          </div>
+          <div class="progress" aria-hidden="true"><span id="bar"></span></div>
+          <p id="report"></p>
+          <ul id="error-log"></ul>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel stack">
+      <h2>Campañas</h2>
+      <div id="history"></div>
+    </section>
+
+    <section class="panel stack">
+      <h2>Plantillas</h2>
+      <div id="templates"></div>
+    </section>
+
+    <section class="panel stack">
+      <h2>Si no nombrás un filtro</h2>
+      <p class="quiet">Estos valores se usan solos. Lo que escribas en el pedido reemplaza únicamente ese dato.</p>
+      <form id="defaults">
+        <table>
+          <tbody>
+            <tr><td>Países</td><td><input name="countries" id="d-countries"></td></tr>
+            <tr><td>Prioridad</td><td><input name="priorityCountry" id="d-priority"></td></tr>
+            <tr><td>Rubros</td><td><input name="industries" id="d-industries"></td></tr>
+            <tr><td>Tamaño mínimo</td><td><input name="minEmployees" id="d-employees" type="number" min="1"></td></tr>
+            <tr><td>Cargos</td><td><input name="roles" id="d-roles"></td></tr>
+            <tr><td>Objetivo</td><td><input name="targetContacts" id="d-target" type="number" min="1"></td></tr>
+            <tr><td>Lote máximo</td><td><input name="maxBatch" id="d-batch" type="number" min="1" max="25"></td></tr>
+            <tr><td>Fuente</td><td>Sales Navigator</td></tr>
+            <tr><td>Importación</td><td>Surfe</td></tr>
+            <tr><td>CRM</td><td>HubSpot</td></tr>
+            <tr><td>Duplicados</td><td>Omitir contactos existentes</td></tr>
+          </tbody>
+        </table>
+        <div class="actions"><button class="primary" type="submit">Guardar configuración</button></div>
+      </form>
+    </section>
+  </main>
+  <script>
+    const examples = [
+      "Necesito 200 contactos de empresas farmacéuticas de Chile, con más de 500 empleados, que trabajen en Recursos Humanos o Capacitación.",
+      "Necesito 150 responsables de capacitación de empresas mineras de Chile, con más de 500 empleados.",
+      "Cuando termines los 200 de Chile, buscame otros 100 de Argentina, pero solamente del sector salud."
+    ];
+    const agentStateName = {
+      working: "Trabajando",
+      waiting: "Esperando",
+      stuck: "Trabado",
+      idle: "En reposo",
+      done: "Listo"
+    };
+
+    async function refreshAgents() {
+      const response = await fetch("/api/agents");
+      const floor = await response.json();
+      const banner = document.querySelector("#floor-banner");
+      if (floor.stuck) {
+        banner.className = "floor-banner stuck";
+        banner.textContent = "Supervisor está apagando el incendio de " + floor.stuck.name + ". " + floor.stuck.stuckAt;
+      } else {
+        banner.className = "floor-banner";
+        banner.textContent = floor.supervisor.state === "working"
+          ? floor.supervisor.doing
+          : "No hay incendios.";
+      }
+      document.querySelector("#boss").innerHTML = personCard(floor.supervisor);
+      document.querySelector("#people").innerHTML = floor.agents.map(personCard).join("");
+    }
+
+    function personCard(agent) {
+      const where = agent.stuckAt
+        ? "<p class='where'>" + (agent.state === "stuck" ? "Trabado en: " : "Incendio: ") + escapeHtml(agent.stuckAt) + "</p>"
+        : "";
+      return "<button type='button' class='person " + agent.state + "' data-agent='" + agent.id + "' aria-pressed='false'>" +
+        "<span class='figure' aria-hidden='true'><span class='head'></span><span class='body'></span></span>" +
+        "<strong>" + escapeHtml(agent.name) + "</strong>" +
+        "<span class='state'>" + escapeHtml(agentStateName[agent.state] || agent.state) + "</span>" +
+        "<p>" + escapeHtml(agent.doing) + "</p>" + where + "</button>";
+    }
+
+    const statusName = {
+      filters_ready: "Lista para iniciar",
+      queued: "En cola",
+      running: "En curso",
+      paused: "En pausa",
+      stopped: "Detenida",
+      blocked: "Detenida antes de buscar",
+      completed: "Objetivo alcanzado",
+      partial: "Búsqueda incompleta",
+      default: "Configuración de TGA",
+      custom: "Pedido propio",
+      recurring: "Recurrente"
+    };
+    const fieldName = {
+      targetContacts: "cantidad",
+      minEmployees: "tamaño",
+      countries: "países",
+      industries: "rubros",
+      roles: "cargos",
+      maxBatch: "lote",
+      priorityCountry: "prioridad",
+      excludeAlreadyImported: "duplicados",
+      avoidProcessedCompanies: "empresas ya procesadas"
+    };
+    const instruction = document.querySelector("#instruction");
+    const reviewBody = document.querySelector("#review-body");
+    const emptyReview = document.querySelector("#empty-review");
+    let currentId = null;
+
+    function applyTheme(theme) {
+      const next = theme === "dark" ? "dark" : "light";
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem("tga-theme", next);
+      document.querySelectorAll("[data-set-theme]").forEach((button) => {
+        button.setAttribute("aria-pressed", button.dataset.setTheme === next ? "true" : "false");
+      });
+    }
+    document.querySelectorAll("[data-set-theme]").forEach((button) => {
+      button.addEventListener("click", () => applyTheme(button.dataset.setTheme));
+    });
+    applyTheme(document.documentElement.dataset.theme || "light");
+
+    examples.forEach((text, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = "Ejemplo " + (index + 1);
+      button.addEventListener("click", () => { instruction.value = text; instruction.focus(); });
+      document.querySelector("#examples").append(button);
+    });
+
+    document.querySelector("#prepare").addEventListener("click", () => postInstruction("/api/interpret", { instruction: instruction.value }));
+    document.querySelector("#use-default").addEventListener("click", () => postInstruction("/api/default", {}));
+    document.querySelector("#start").addEventListener("click", () => act("start"));
+    document.querySelector("#pause").addEventListener("click", () => act("pause"));
+    document.querySelector("#resume").addEventListener("click", () => act("resume"));
+    document.querySelector("#stop").addEventListener("click", () => act("stop"));
+    document.querySelector("#save-template").addEventListener("click", () => act("template"));
+    document.querySelector("#defaults").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const payload = {
+        countries: split(document.querySelector("#d-countries").value),
+        priorityCountry: document.querySelector("#d-priority").value.trim(),
+        industries: split(document.querySelector("#d-industries").value),
+        minEmployees: Number(document.querySelector("#d-employees").value),
+        roles: split(document.querySelector("#d-roles").value),
+        targetContacts: Number(document.querySelector("#d-target").value),
+        maxBatch: Number(document.querySelector("#d-batch").value)
+      };
+      const response = await fetch("/api/defaults", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const body = await response.json();
+      if (!response.ok) { alert(body.error); return; }
+      await refresh();
+    });
+
+    async function postInstruction(path, payload) {
+      const response = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const body = await response.json();
+      if (!response.ok) { alert(body.error); return; }
+      currentId = body.campaign.id;
+      showCampaign(body.campaign, body.queued);
+      await refresh();
+    }
+
+    async function act(action) {
+      if (!currentId) return;
+      const response = await fetch("/api/campaigns/" + currentId + "/" + action, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+      const body = await response.json();
+      if (!response.ok) { alert(body.error); return; }
+      if (action === "template") { await refresh(); return; }
+      showCampaign(body, false);
+      await refresh();
+    }
+
+    function showCampaign(campaign, queued) {
+      reviewBody.hidden = false;
+      emptyReview.hidden = true;
+      const config = campaign.config;
+      const changes = config.explicitFields.length
+        ? config.explicitFields.map((field) => fieldName[field] || field).join(", ")
+        : "ninguno. Queda la configuración de TGA";
+      document.querySelector("#mode").textContent = (queued ? "En cola. " : "") + (statusName[campaign.mode] || campaign.mode) + ". " + (statusName[campaign.status] || campaign.status) + ".";
+      document.querySelector("#filters").innerHTML = [
+        line("Países", config.countries.join(", ")),
+        line("Prioridad", config.priorityCountry),
+        line("Rubros", config.industries.join(", ")),
+        line("Tamaño mínimo", config.minEmployees + " empleados"),
+        line("Cargos", config.roles.join(", ")),
+        line("Objetivo", config.targetContacts + " contactos"),
+        line("Lote", config.maxBatch),
+        line("Cambios", changes),
+        line("Empresas pedidas", config.requestedCompanies ?? "no aplica")
+      ].join("");
+      document.querySelector("#warnings").textContent = (config.warnings || []).join(" ");
+      document.querySelector("#notes").textContent = (config.salesNavigator.notes || []).join(" ");
+      document.querySelector("#search-url").value = config.salesNavigator.url;
+      document.querySelector("#found").textContent = String(campaign.found);
+      document.querySelector("#imported").textContent = String(campaign.imported);
+      document.querySelector("#skipped").textContent = String(campaign.skipped);
+      document.querySelector("#error-count").textContent = String(campaign.errors.length);
+      const ratio = config.targetContacts ? Math.min(100, Math.round((campaign.imported / config.targetContacts) * 100)) : 0;
+      document.querySelector("#bar").style.width = ratio + "%";
+      document.querySelector("#report").textContent = campaign.report || "Todavía no hay resultados. Iniciar no abre Chrome ni pulsa Surfe mientras la extensión no pueda usar la sesión.";
+      document.querySelector("#error-log").innerHTML = campaign.errors.map((error) => "<li class='error'>" + escapeHtml(error.message) + "</li>").join("");
+      document.querySelector("#start").disabled = campaign.status !== "filters_ready";
+      document.querySelector("#pause").disabled = campaign.status !== "running";
+      document.querySelector("#resume").disabled = campaign.status !== "paused";
+      document.querySelector("#stop").disabled = !["filters_ready", "queued", "running", "paused"].includes(campaign.status);
+    }
+
+    function line(name, value) {
+      return "<p class='pair'><span>" + escapeHtml(name) + ":</span> " + escapeHtml(String(value)) + "</p>";
+    }
+
+    function split(value) {
+      return value.split(",").map((item) => item.trim()).filter(Boolean);
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    }
+
+    async function refresh() {
+      const response = await fetch("/api/state");
+      const state = await response.json();
+      const defaults = state.defaults;
+      document.querySelector("#d-countries").value = defaults.countries.join(", ");
+      document.querySelector("#d-priority").value = defaults.priorityCountry;
+      document.querySelector("#d-industries").value = defaults.industries.join(", ");
+      document.querySelector("#d-employees").value = defaults.minEmployees;
+      document.querySelector("#d-roles").value = defaults.roles.join(", ");
+      document.querySelector("#d-target").value = defaults.targetContacts;
+      document.querySelector("#d-batch").value = defaults.maxBatch;
+      document.querySelector("#history").innerHTML = state.campaigns.slice().reverse().map((campaign) =>
+        "<article class='entry'><p>" + escapeHtml(campaign.instruction) + "</p><p class='quiet'>" +
+        escapeHtml(statusName[campaign.status] || campaign.status) + ". Importados " + campaign.imported + ". Omitidos " + campaign.skipped + ".</p><p>" +
+        escapeHtml(campaign.report || "Sin reporte.") + "</p></article>"
+      ).join("") || "<p class='quiet'>Todavía no hay campañas. Escribí un pedido para preparar la primera.</p>";
+      document.querySelector("#templates").innerHTML = state.templates.map((template) =>
+        "<article class='template'><p>" + escapeHtml(template.instruction) + "</p><p class='quiet'>" +
+        (template.approved ? "Aprobada. Una instrucción igual puede iniciar sola." : "Sin aprobar. La primera ejecución pide confirmación.") +
+        "</p>" + (template.approved ? "" : "<button class='approve' type='button' data-approve='" + template.id + "'>Aprobar plantilla</button>") + "</article>"
+      ).join("") || "<p class='quiet'>No hay plantillas.</p>";
+      document.querySelectorAll("[data-approve]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          await fetch("/api/templates/" + button.dataset.approve + "/approve", { method: "POST" });
+          await refresh();
+        });
+      });
+      if (currentId) {
+        const campaign = state.campaigns.find((item) => item.id === currentId);
+        if (campaign) showCampaign(campaign, campaign.status === "queued");
+      }
+    }
+
+    const events = new EventSource("/api/events");
+    events.onmessage = () => { refresh(); refreshAgents(); };
+    refresh();
+    refreshAgents();
+    setInterval(refreshAgents, 5000);
+  </script>
+</body>
+</html>

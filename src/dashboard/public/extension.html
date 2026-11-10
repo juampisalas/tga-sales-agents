@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalá Playwright · TGA AI Sales Commander</title>
+<style>
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: light-dark(#e8edf2,#0e1318); color: light-dark(#15202b,#e6edf3); }
+main { max-width: 480px; margin: 24px; padding: 36px; border: 1px solid #778899; border-radius: 16px; }
+h1 { font-size: 28px; } p { line-height: 1.6; }
+a,button { display: inline-block; padding: 12px 18px; margin: 8px 8px 8px 0; border-radius: 8px; font: inherit; cursor: pointer; }
+a { background: #173f66; color: white; text-decoration: none; }
+button { border: 1px solid; background: transparent; color: inherit; }
+</style>
+</head>
+<body><main>
+<p>TGA AI Sales Commander</p>
+<h1>Instalá Playwright para entrar</h1>
+<p>No detectamos la extensión en los perfiles locales de Chrome. Es necesaria para usar la aplicación.</p>
+<p>Abrí la tienda, elegí «Añadir a Chrome» y confirmá la instalación. Después volvé a esta pestaña.</p>
+<a href="https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm" target="_blank" rel="noopener noreferrer">Instalar extensión</a>
+<button id="retry" type="button">Ya la instalé</button>
+<p id="status" role="status" aria-live="polite">El acceso se habilitará cuando detectemos la instalación.</p>
+<noscript>Después de instalarla, recargá esta página para entrar.</noscript>
+</main>
+<script>
+let checking = false;
+async function checkExtension(manual = false) {
+  if (checking) return;
+  checking = true;
+  const button = document.getElementById("retry");
+  const status = document.getElementById("status");
+  button.disabled = true;
+  try {
+    const response = await fetch("/api/extension", { cache: "no-store" });
+    if (!response.ok) throw new Error("check failed");
+    const result = await response.json();
+    if (result.ok === true) { location.reload(); return; }
+    if (manual) status.textContent = "Todavía no la detectamos. Completá la instalación en Chrome y volvé a intentar.";
+  } catch {
+    status.textContent = "No pudimos comprobar la extensión. Verificá que la aplicación siga encendida y volvé a intentar.";
+  } finally { checking = false; button.disabled = false; }
+}
+document.getElementById("retry").addEventListener("click", () => checkExtension(true));
+window.addEventListener("focus", () => checkExtension());
+setInterval(() => { if (!document.hidden) checkExtension(); }, 3000);
+</script>
+</body></html>

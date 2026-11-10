@@ -1,0 +1,14 @@
+---
+description: Reglas de TGA AI Sales Commander para interpretar campañas y no declarar importaciones sin evidencia
+alwaysApply: true
+---
+
+# TGA Sales Commander
+
+- Interpretá el pedido en español: lo explícito reemplaza la configuración de TGA y lo omitido se conserva.
+- "Solo Chile" deja únicamente Chile. "Chile y Argentina" deja solo esos países. "200 empresas" no es "200 contactos".
+- Mostrá los filtros antes de la primera ejecución. Una instrucción durante una campaña activa entra en la cola.
+- El avance es la máquina de estados en SQLite, no una decisión improvisada.
+- No inicies sesión en LinkedIn, no guardes contraseñas y detené la campaña ante una verificación de seguridad.
+- No pulses Surfe ni marques importados sin evidencia de Surfe y de HubSpot. Los duplicados no cuentan como nuevos.
+- No edites `.cursor/mcp.json`. Sigue en `npx @playwright/mcp@latest --extension`.

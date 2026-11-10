@@ -1,0 +1,22 @@
+{
+  "name": "tga-sales-agents",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TGA Sales Agents. El commander interpreta pedidos en español y guarda campañas en SQLite.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/phase1.test.ts tests/mcp-config.test.ts tests/interpreter.test.ts tests/machine.test.ts tests/orchestrator.test.ts tests/dashboard.test.ts tests/search-snapshot.test.ts tests/hubspot-transfer.test.ts tests/load-env.test.ts tests/agent-floor.test.ts tests/markets.test.ts tests/list-policy.test.ts tests/daily-loop.test.ts",
+    "check": "npm run typecheck && npm test",
+    "check:extension": "node scripts/check-playwright-extension.mjs",
+    "phase1": "node src/index.ts",
+    "dashboard": "node src/dashboard-main.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}
