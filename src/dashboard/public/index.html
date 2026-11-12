@@ -146,6 +146,19 @@
     .person.waiting .head, .person.waiting .body { background: var(--warn); }
     .person.stuck .head, .person.stuck .body { background: var(--alert); }
     .person.done .head, .person.done .body { background: var(--accent); }
+    .solo {
+      margin-top: 0.95rem;
+      padding-top: 0.95rem;
+      border-top: 1px solid var(--line);
+    }
+    .solo h3 { margin: 0 0 0.35rem; font-size: 1rem; }
+    .solo-row {
+      display: grid;
+      grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+      gap: 0.8rem;
+      align-items: start;
+    }
+    #prospecting-report { margin: 0 0 0.7rem; white-space: pre-wrap; }
     .person strong { display: block; font-size: 0.95rem; }
     .person .state { display: block; color: var(--quiet); font-size: 0.82rem; margin: 0.15rem 0 0.35rem; }
     .person.stuck .state { color: var(--alert); }
@@ -225,6 +238,7 @@
       .workspace { grid-template-columns: 1fr; }
       .boss .person { width: 100%; }
       .people { grid-template-columns: 1fr 1fr; }
+      .solo-row { grid-template-columns: 1fr; }
       .counts { grid-template-columns: 1fr 1fr; }
       h1 { max-width: none; }
       .brand span { display: none; }
@@ -249,6 +263,17 @@
       <p id="floor-banner" class="floor-banner">Cargando el piso.</p>
       <div class="boss" id="boss"></div>
       <div class="people" id="people"></div>
+      <div class="solo">
+        <h3>Por su cuenta</h3>
+        <p class="quiet">Prospección no espera la lista del día.</p>
+        <div class="solo-row">
+          <div id="prospecting-slot"></div>
+          <div>
+            <p id="prospecting-report" class="quiet"></p>
+            <button class="primary" id="start-prospecting" type="button">Arrancar prospección</button>
+          </div>
+        </div>
+      </div>
     </section>
     <div class="workspace">
       <section class="panel">
@@ -367,7 +392,31 @@
       }
       document.querySelector("#boss").innerHTML = personCard(floor.supervisor);
       document.querySelector("#people").innerHTML = floor.agents.map(personCard).join("");
+      if (floor.prospecting) paintProspecting(floor.prospecting);
     }
+
+    function paintProspecting(agent) {
+      document.querySelector("#prospecting-slot").innerHTML = personCard(agent);
+      document.querySelector("#prospecting-report").textContent = agent.report || "";
+      const button = document.querySelector("#start-prospecting");
+      button.disabled = agent.state === "working";
+      button.textContent = agent.state === "working" ? "Buscando" : "Arrancar prospección";
+    }
+
+    document.querySelector("#start-prospecting").addEventListener("click", async () => {
+      const button = document.querySelector("#start-prospecting");
+      button.disabled = true;
+      button.textContent = "Buscando";
+      const response = await fetch("/api/prospecting/start", { method: "POST" });
+      const body = await response.json();
+      if (!response.ok) {
+        button.disabled = false;
+        button.textContent = "Arrancar prospección";
+        document.querySelector("#prospecting-report").textContent = body.error || "No pudo arrancar.";
+        return;
+      }
+      paintProspecting(body);
+    });
 
     function personCard(agent) {
       const where = agent.stuckAt

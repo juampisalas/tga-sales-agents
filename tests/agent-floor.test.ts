@@ -15,8 +15,16 @@ test("sin carga, nadie figura trabajando", () => {
     "hubspot",
     "qualification",
   ]);
+  assert.equal(floor.agents.some((agent) => agent.id === "prospecting"), false);
   assert.equal(floor.stuck, null);
   assert.equal(floor.agents.every((agent) => agent.state === "idle" || agent.state === "waiting"), true);
+});
+
+test("la lista diaria no incluye a prospección", () => {
+  const log = "2026-11-05T17:59:40.000Z Syncing to HubSpot (240/249)";
+  const floor = agentFloor(log, now);
+  assert.equal(floor.agents.some((agent) => agent.id === "prospecting"), false);
+  assert.equal(floor.agents.find((agent) => agent.id === "surfe")?.state, "working");
 });
 
 test("el mismo conteo durante un minuto deja a Surfe trabado en ese punto", () => {

@@ -18,6 +18,7 @@ class SharedOpenAIClientTest(unittest.TestCase):
             "agents.qualifier.agent",
             "agents.surfe.agent",
             "agents.hubspot.agent",
+            "agents.prospecting.agent",
             "agents.reporter.agent",
         )
         for module_name in modules:

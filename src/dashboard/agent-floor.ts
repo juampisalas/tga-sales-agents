@@ -3,7 +3,7 @@ export const surfeHandoffLogPath = "/tmp/tga-segment-handoff.log";
 export type AgentState = "working" | "waiting" | "stuck" | "idle" | "done";
 
 export type AgentPost = {
-  id: "navigator" | "selection" | "surfe" | "hubspot" | "qualification" | "supervisor";
+  id: "navigator" | "selection" | "surfe" | "hubspot" | "qualification" | "prospecting" | "supervisor";
   name: string;
   state: AgentState;
   doing: string;
@@ -162,6 +162,16 @@ function supervisorPost(broken: boolean, fire: AgentPost | null, reloaded: boole
     return post("supervisor", "Supervisor", "working", "Se fija que los que tienen trabajo estén laburando.", null);
   }
   return post("supervisor", "Supervisor", "idle", "No hay incendios.", null);
+}
+
+export function idleProspecting(): AgentPost {
+  return post(
+    "prospecting",
+    "Prospección",
+    "idle",
+    "Busca por su cuenta empresas que quieren capacitarse y perfiles muy senior para TGA.",
+    null,
+  );
 }
 
 function post(id: AgentPost["id"], name: string, state: AgentState, doing: string, stuckAt: string | null): AgentPost {

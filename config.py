@@ -16,5 +16,6 @@ MODELS = {
     "qualifier": "gpt-4.1",
     "surfe": "gpt-4.1-mini",
     "hubspot": "gpt-4.1-mini",
+    "prospecting": "gpt-4.1",
     "reporter": "gpt-4.1-mini",
 }

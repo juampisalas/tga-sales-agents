@@ -9,7 +9,11 @@ import { CampaignStore } from "../src/campaign/store.ts";
 
 const PHARMA = "Necesito 200 contactos de empresas farmacéuticas de Chile, con más de 500 empleados, que trabajen en Recursos Humanos o Capacitación.";
 
-async function startServer(installed = true, envPath = join(mkdtempSync(join(tmpdir(), "tga-dash-")), ".env")) {
+async function startServer(
+  installed = true,
+  envPath = join(mkdtempSync(join(tmpdir(), "tga-dash-")), ".env"),
+  prospectingRun: () => Promise<string> = async () => "No hay señal todavía.",
+) {
   const store = CampaignStore.open(":memory:");
   const env: NodeJS.ProcessEnv = {};
   const dashboard = createDashboard(store, {
@@ -21,7 +25,7 @@ async function startServer(installed = true, envPath = join(mkdtempSync(join(tmp
       openai: { saved: Boolean(current.OPENAI_API_KEY?.trim()), connected: current.OPENAI_API_KEY === "sk-pagina-openai" },
       hubspot: { saved: Boolean(current.HUBSPOT_ACCESS_TOKEN?.trim()), connected: current.HUBSPOT_ACCESS_TOKEN === "pat-pagina-hubspot" },
     }),
-  });
+  }, prospectingRun);
   await new Promise<void>((resolve) => dashboard.server.listen(0, "127.0.0.1", () => resolve()));
   const address = dashboard.server.address() as AddressInfo;
   return {
@@ -54,10 +58,14 @@ test("el panel muestra el chat y los controles", async () => {
     assert.match(html, /Conectada/);
     assert.match(html, /id="agent-floor"/);
     assert.match(html, /El supervisor está arriba/);
+    assert.match(html, /Por su cuenta/);
+    assert.match(html, /id="start-prospecting"/);
+    assert.match(html, /Arrancar prospección/);
     const agents = await fetch(`${server.base}/api/agents`);
-    const floor = await agents.json() as { supervisor: { id: string }; agents: { id: string }[] };
+    const floor = await agents.json() as { supervisor: { id: string }; agents: { id: string }[]; prospecting: { id: string } };
     assert.equal(agents.status, 200);
     assert.equal(floor.supervisor.id, "supervisor");
+    assert.equal(floor.prospecting.id, "prospecting");
     assert.deepEqual(floor.agents.map((agent) => agent.id), [
       "navigator",
       "selection",
@@ -65,6 +73,23 @@ test("el panel muestra el chat y los controles", async () => {
       "hubspot",
       "qualification",
     ]);
+  } finally {
+    await server.close();
+  }
+});
+
+test("arrancar prospección no mezcla su resultado con la lista diaria", async () => {
+  const server = await startServer();
+  try {
+    const started = await fetch(`${server.base}/api/prospecting/start`, { method: "POST" });
+    const body = await started.json() as { id: string; state: string; report: string };
+    assert.equal(started.status, 200);
+    assert.equal(body.id, "prospecting");
+    assert.equal(body.state, "done");
+    assert.equal(body.report, "No hay señal todavía.");
+    const floor = await (await fetch(`${server.base}/api/agents`)).json() as { agents: { id: string }[]; prospecting: { report: string } };
+    assert.equal(floor.agents.some((agent) => agent.id === "prospecting"), false);
+    assert.equal(floor.prospecting.report, "No hay señal todavía.");
   } finally {
     await server.close();
   }
