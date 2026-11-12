@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DefaultConfig } from "../config/defaults.ts";
+import { projectEnvPath, saveApiKeys } from "../config/load-env.ts";
+import { probeCredentials, type CredentialLinks } from "../config/probe-credentials.ts";
 import { agentFloor, surfeHandoffLogPath } from "../dashboard/agent-floor.ts";
 import { Orchestrator, type BrowserGate } from "../campaign/orchestrator.ts";
 import { CampaignStore } from "../campaign/store.ts";
@@ -16,7 +18,17 @@ export type Dashboard = {
   store: CampaignStore;
 };
 
-export function createDashboard(store: CampaignStore, gate: BrowserGate, checkAccess: BrowserGate["canSearch"] = () => gate.canSearch()): Dashboard {
+export function createDashboard(
+  store: CampaignStore,
+  gate: BrowserGate,
+  checkAccess: BrowserGate["canSearch"] = () => gate.canSearch(),
+  credentials: {
+    path: string;
+    env: NodeJS.ProcessEnv;
+    probe?: (env: NodeJS.ProcessEnv) => Promise<CredentialLinks>;
+  } = { path: projectEnvPath, env: process.env },
+): Dashboard {
+  const probe = credentials.probe ?? ((env: NodeJS.ProcessEnv) => probeCredentials(env));
   const orchestrator = new Orchestrator(store, gate);
   const clients = new Set<ServerResponse>();
   const notify = () => {
@@ -32,6 +44,17 @@ export function createDashboard(store: CampaignStore, gate: BrowserGate, checkAc
       res.setHeader("cache-control", "no-store");
       if (req.method === "GET" && url.pathname === "/api/extension") {
         return sendJson(res, 200, { ok: access.ok });
+      }
+      if (req.method === "GET" && url.pathname === "/api/credentials") {
+        return sendJson(res, 200, await probe(credentials.env));
+      }
+      if (req.method === "POST" && url.pathname === "/api/credentials") {
+        const posted = await readBody(req);
+        saveApiKeys(credentials.path, {
+          openaiApiKey: optionalSecret(posted, "openaiApiKey"),
+          hubspotAccessToken: optionalSecret(posted, "hubspotAccessToken"),
+        }, credentials.env);
+        return sendJson(res, 200, await probe(credentials.env));
       }
       if (req.method === "GET" && url.pathname === "/") {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -152,6 +175,17 @@ async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> 
     throw new Error("El cuerpo tiene que ser un objeto JSON.");
   }
   return parsed as Record<string, unknown>;
+}
+
+function optionalSecret(body: Record<string, unknown>, key: string): string | undefined {
+  const value = body[key];
+  if (value === undefined || value === "") {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    throw new Error(`${key} tiene que ser texto.`);
+  }
+  return value;
 }
 
 function stringField(body: Record<string, unknown>, key: string): string {

@@ -219,7 +219,8 @@
     table { width: 100%; border-collapse: collapse; }
     td { padding: 0.45rem 0.35rem 0.45rem 0; vertical-align: middle; border-bottom: 1px solid var(--line); }
     td:first-child { width: 34%; color: var(--quiet); }
-    #defaults input { padding: 0.4rem 0.55rem; }
+    #defaults input, #keys input { padding: 0.4rem 0.55rem; width: 100%; }
+    #keys [hidden] { display: none; }
     @media (max-width: 860px) {
       .workspace { grid-template-columns: 1fr; }
       .boss .person { width: 100%; }
@@ -305,6 +306,18 @@
     <section class="panel stack">
       <h2>Si no nombrás un filtro</h2>
       <p class="quiet">Estos valores se usan solos. Lo que escribas en el pedido reemplaza únicamente ese dato.</p>
+      <form id="keys">
+        <p class="quiet">Cada persona escribe acá su clave. Queda en esta máquina y no se publica.</p>
+        <table>
+          <tbody>
+            <tr><td><label for="openai-key">OpenAI</label></td><td><input id="openai-key" name="openaiApiKey" type="password" autocomplete="off" spellcheck="false"><span id="openai-connected" hidden>Conectada</span></td></tr>
+            <tr><td><label for="hubspot-key">HubSpot</label></td><td><input id="hubspot-key" name="hubspotAccessToken" type="password" autocomplete="off" spellcheck="false"><span id="hubspot-connected" hidden>Conectada</span></td></tr>
+          </tbody>
+        </table>
+        <p id="key-status" class="quiet" role="status"></p>
+        <div class="actions" id="key-actions"><button class="primary" type="submit">Guardar claves</button></div>
+        <div class="actions"><button class="quiet" id="change-keys" type="button" hidden>Cambiar claves</button></div>
+      </form>
       <form id="defaults">
         <table>
           <tbody>
@@ -541,9 +554,69 @@
       }
     }
 
+    let editingKeys = false;
+
+    function serviceWord(link) {
+      if (link && link.connected) return "conectada";
+      if (link && link.saved) return "no conecta";
+      return "falta";
+    }
+
+    function paintKeys(status) {
+      const openaiOn = Boolean(status.openai && status.openai.connected) && !editingKeys;
+      const hubspotOn = Boolean(status.hubspot && status.hubspot.connected) && !editingKeys;
+      document.querySelector("#openai-key").hidden = openaiOn;
+      document.querySelector("#openai-connected").hidden = !openaiOn;
+      document.querySelector("#hubspot-key").hidden = hubspotOn;
+      document.querySelector("#hubspot-connected").hidden = !hubspotOn;
+      if (openaiOn) document.querySelector("#openai-key").value = "";
+      if (hubspotOn) document.querySelector("#hubspot-key").value = "";
+      document.querySelector("#key-actions").hidden = openaiOn && hubspotOn;
+      document.querySelector("#change-keys").hidden = !(status.openai && status.openai.connected && status.hubspot && status.hubspot.connected) || editingKeys;
+      document.querySelector("#key-status").textContent = "OpenAI " + serviceWord(status.openai) + ". HubSpot " + serviceWord(status.hubspot) + ".";
+    }
+
+    async function refreshKeys() {
+      document.querySelector("#key-status").textContent = "Comprobando la conexión.";
+      const response = await fetch("/api/credentials");
+      paintKeys(await response.json());
+    }
+
+    document.querySelector("#change-keys").addEventListener("click", () => {
+      editingKeys = true;
+      document.querySelector("#openai-key").hidden = false;
+      document.querySelector("#hubspot-key").hidden = false;
+      document.querySelector("#openai-connected").hidden = true;
+      document.querySelector("#hubspot-connected").hidden = true;
+      document.querySelector("#key-actions").hidden = false;
+      document.querySelector("#change-keys").hidden = true;
+    });
+
+    document.querySelector("#keys").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const response = await fetch("/api/credentials", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          openaiApiKey: document.querySelector("#openai-key").value,
+          hubspotAccessToken: document.querySelector("#hubspot-key").value,
+        }),
+      });
+      const status = await response.json();
+      document.querySelector("#openai-key").value = "";
+      document.querySelector("#hubspot-key").value = "";
+      if (!response.ok) {
+        document.querySelector("#key-status").textContent = status.error || "No se pudieron guardar las claves.";
+        return;
+      }
+      editingKeys = false;
+      paintKeys(status);
+    });
+
     const events = new EventSource("/api/events");
     events.onmessage = () => { refresh(); refreshAgents(); };
     refresh();
+    refreshKeys();
     refreshAgents();
     setInterval(refreshAgents, 5000);
   </script>

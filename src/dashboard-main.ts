@@ -25,6 +25,7 @@ const dashboard = createDashboard(store, {
   },
 });
 const port = Number(process.env.PORT ?? 8787);
-dashboard.server.listen(port, "127.0.0.1", () => {
+dashboard.server.listen(port, "0.0.0.0", () => {
   console.log(`TGA AI Sales Commander en http://127.0.0.1:${port}`);
+  console.log(`En el celular, con la misma red Wi-Fi, abrí http://<IP de esta Mac>:${port}`);
 });

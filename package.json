@@ -9,7 +9,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/phase1.test.ts tests/mcp-config.test.ts tests/interpreter.test.ts tests/machine.test.ts tests/orchestrator.test.ts tests/dashboard.test.ts tests/search-snapshot.test.ts tests/hubspot-transfer.test.ts tests/load-env.test.ts tests/agent-floor.test.ts tests/markets.test.ts tests/list-policy.test.ts tests/daily-loop.test.ts",
+    "test": "node --test tests/phase1.test.ts tests/mcp-config.test.ts tests/interpreter.test.ts tests/machine.test.ts tests/orchestrator.test.ts tests/dashboard.test.ts tests/search-snapshot.test.ts tests/hubspot-transfer.test.ts tests/load-env.test.ts tests/probe-credentials.test.ts tests/agent-floor.test.ts tests/markets.test.ts tests/list-policy.test.ts tests/daily-loop.test.ts",
     "check": "npm run typecheck && npm test",
     "check:extension": "node scripts/check-playwright-extension.mjs",
     "phase1": "node src/index.ts",
