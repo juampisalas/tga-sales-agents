@@ -5,7 +5,7 @@ export type ListStep = {
   typedName: string;
 };
 
-/** Surfe escribe la fecha. El agente solo escribe el país al crear la lista. */
+/** Surfe escribe la fecha. El paso solo escribe el país al crear la lista. */
 export function nextListStep(input: { country: string; openListCountry: string | null }): ListStep {
   const create = input.openListCountry !== input.country || input.openListCountry === null;
   return {

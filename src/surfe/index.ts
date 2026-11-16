@@ -1,6 +1,6 @@
 import type { Phase1Module } from "../types.ts";
 
-export const surfeAgent = {
+export const surfeStep = {
   id: "surfe",
   phaseImplemented: 1,
   summary:

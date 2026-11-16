@@ -38,7 +38,7 @@ Playwright, con la config actual (sin `--profile-dir-name`), se engancha al últ
 
 La prueba de acción de Surfe (botón de importación y confirmación) es la fase 3 y no está hecha. Esta fase no describe controles de Surfe porque la extensión no llegó a conectar.
 
-## Agentes de OpenAI
+## Pasos
 
 Una sola clave, en `.env`:
 
@@ -47,13 +47,13 @@ OPENAI_API_KEY=
 HUBSPOT_ACCESS_TOKEN=
 ```
 
-`.env` está en `.gitignore`. Cada agente importa el mismo cliente:
+`.env` está en `.gitignore`. Prospección importa el cliente compartido:
 
 ```python
 from shared.openai_client import client
 ```
 
-El modelo de cada uno está en `config.py`. Para ver el equipo sin llamar a OpenAI:
+El modelo está en `config.py`. Para verlo sin llamar a OpenAI:
 
 ```bash
 python3 -m venv .venv
@@ -62,8 +62,8 @@ python3 -m venv .venv
 .venv/bin/python -m unittest tests/test_shared_openai_client.py
 ```
 
-`python main.py` seguido de un pedido se lo manda al orquestador.
+`python main.py` seguido de un pedido se lo manda a prospección.
 
 ## Módulos
 
-`src/navigator`, `src/selection`, `src/surfe`, `src/hubspot`, `src/qualification`, `src/supervisor` y el placeholder SQLite en `src/persistence/sqlite.ts` (Node `node:sqlite`). Las variables de entorno de ejemplo están en `.env.example`, sin secretos.
+`src/navigator`, `src/selection`, `src/surfe`, `src/hubspot`, `src/qualification` y el placeholder SQLite en `src/persistence/sqlite.ts` (Node `node:sqlite`). Las variables de entorno de ejemplo están en `.env.example`, sin secretos.

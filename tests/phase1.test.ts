@@ -9,15 +9,14 @@ import {
 import { phase1Status } from "../src/phase1.ts";
 import { qualifyContact } from "../src/qualification/index.ts";
 import { MAX_BATCH, selectBatch } from "../src/selection/index.ts";
-import { resumeRun } from "../src/supervisor/index.ts";
 import { startSurfeImport, surfeImportTest } from "../src/surfe/index.ts";
 
-test("phase 1 exposes the six brief modules and leaves later phases unstarted", () => {
+test("phase 1 exposes the five brief modules and leaves later phases unstarted", () => {
   const status = phase1Status();
   assert.equal(status.phase, 1);
   assert.deepEqual(
     status.modules.map((module) => module.id),
-    ["navigator", "selection", "surfe", "hubspot", "qualification", "supervisor"],
+    ["navigator", "selection", "surfe", "hubspot", "qualification"],
   );
   assert.equal(status.persistence, "placeholder");
   assert.deepEqual(status.phasesNotStarted, [2, 3, 4, 5, 6, 7]);
@@ -40,7 +39,6 @@ test("later-phase actions stay unimplemented", () => {
   assert.throws(() => selectBatch(), /Phase 4/);
   assert.throws(() => verifyHubSpotImports(), /not implemented/);
   assert.throws(() => qualifyContact(), /does not invent/);
-  assert.throws(() => resumeRun(), /not implemented/);
 });
 
 test("sqlite placeholder round-trips a note in memory", () => {

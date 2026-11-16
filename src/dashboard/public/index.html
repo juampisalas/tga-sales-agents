@@ -115,37 +115,30 @@
       border: 1px solid var(--line);
     }
     .floor-banner.stuck { color: var(--alert); border-color: var(--alert); }
-    .boss { display: flex; justify-content: center; margin-bottom: 0.7rem; }
-    .boss .person { width: min(100%, 280px); }
-    .people {
+    .steps {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 0.7rem;
     }
-    .person {
+    .step {
       text-align: left;
       background: var(--inset);
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 0.75rem 0.7rem 0.85rem;
     }
-    .person[aria-pressed="true"] { border-color: var(--focus); }
-    .person .figure {
-      width: 28px;
-      height: 36px;
-      margin-bottom: 0.55rem;
-    }
-    .person .head, .person .body {
+    .step .mark {
       display: block;
-      margin: 0 auto;
-      background: var(--quiet);
+      width: 22px;
+      height: 22px;
+      margin-bottom: 0.55rem;
+      fill: currentColor;
+      color: var(--quiet);
     }
-    .person .head { width: 14px; height: 14px; border-radius: 50%; }
-    .person .body { width: 22px; height: 18px; margin-top: 3px; border-radius: 8px 8px 4px 4px; }
-    .person.working .head, .person.working .body { background: var(--focus); }
-    .person.waiting .head, .person.waiting .body { background: var(--warn); }
-    .person.stuck .head, .person.stuck .body { background: var(--alert); }
-    .person.done .head, .person.done .body { background: var(--accent); }
+    .step.working .mark { color: var(--focus); }
+    .step.waiting .mark { color: var(--warn); }
+    .step.stuck .mark { color: var(--alert); }
+    .step.done .mark { color: var(--accent); }
     .solo {
       margin-top: 0.95rem;
       padding-top: 0.95rem;
@@ -159,11 +152,11 @@
       align-items: start;
     }
     #prospecting-report { margin: 0 0 0.7rem; white-space: pre-wrap; }
-    .person strong { display: block; font-size: 0.95rem; }
-    .person .state { display: block; color: var(--quiet); font-size: 0.82rem; margin: 0.15rem 0 0.35rem; }
-    .person.stuck .state { color: var(--alert); }
-    .person p { margin: 0; font-size: 0.86rem; }
-    .person .where { margin-top: 0.35rem; color: var(--alert); }
+    .step strong { display: block; font-size: 0.95rem; }
+    .step .state { display: block; color: var(--quiet); font-size: 0.82rem; margin: 0.15rem 0 0.35rem; }
+    .step.stuck .state { color: var(--alert); }
+    .step p { margin: 0; font-size: 0.86rem; }
+    .step .where { margin-top: 0.35rem; color: var(--alert); }
     h1, h2 { font-weight: 600; letter-spacing: -0.03em; margin: 0 0 0.35rem; }
     h1 { font-size: 1.55rem; line-height: 1.2; max-width: 22ch; }
     h2 { font-size: 1.2rem; }
@@ -236,8 +229,7 @@
     #keys [hidden] { display: none; }
     @media (max-width: 860px) {
       .workspace { grid-template-columns: 1fr; }
-      .boss .person { width: 100%; }
-      .people { grid-template-columns: 1fr 1fr; }
+      .steps { grid-template-columns: 1fr 1fr; }
       .solo-row { grid-template-columns: 1fr; }
       .counts { grid-template-columns: 1fr 1fr; }
       h1 { max-width: none; }
@@ -257,12 +249,11 @@
     </div>
   </header>
   <main>
-    <section class="panel floor" id="agent-floor">
-      <h2>Agentes</h2>
-      <p class="lead">El supervisor está arriba. Se fija que el resto labure y apaga el incendio del que se traba.</p>
-      <p id="floor-banner" class="floor-banner">Cargando el piso.</p>
-      <div class="boss" id="boss"></div>
-      <div class="people" id="people"></div>
+    <section class="panel floor" id="step-floor">
+      <h2>Pasos</h2>
+      <p class="lead">Son los pasos de la búsqueda. Si uno se traba, queda marcado en ese paso.</p>
+      <p id="floor-banner" class="floor-banner">Cargando los pasos.</p>
+      <div class="steps" id="steps"></div>
       <div class="solo">
         <h3>Por su cuenta</h3>
         <p class="quiet">Prospección no espera la lista del día.</p>
@@ -369,7 +360,7 @@
       "Necesito 150 responsables de capacitación de empresas mineras de Chile, con más de 500 empleados.",
       "Cuando termines los 200 de Chile, buscame otros 100 de Argentina, pero solamente del sector salud."
     ];
-    const agentStateName = {
+    const stepStateName = {
       working: "Trabajando",
       waiting: "Esperando",
       stuck: "Trabado",
@@ -377,30 +368,27 @@
       done: "Listo"
     };
 
-    async function refreshAgents() {
-      const response = await fetch("/api/agents");
+    async function refreshSteps() {
+      const response = await fetch("/api/steps");
       const floor = await response.json();
       const banner = document.querySelector("#floor-banner");
       if (floor.stuck) {
         banner.className = "floor-banner stuck";
-        banner.textContent = "Supervisor está apagando el incendio de " + floor.stuck.name + ". " + floor.stuck.stuckAt;
+        banner.textContent = floor.stuck.name + " está trabado. " + floor.stuck.stuckAt;
       } else {
         banner.className = "floor-banner";
-        banner.textContent = floor.supervisor.state === "working"
-          ? floor.supervisor.doing
-          : "No hay incendios.";
+        banner.textContent = "Ningún paso está trabado.";
       }
-      document.querySelector("#boss").innerHTML = personCard(floor.supervisor);
-      document.querySelector("#people").innerHTML = floor.agents.map(personCard).join("");
+      document.querySelector("#steps").innerHTML = floor.steps.map(stepCard).join("");
       if (floor.prospecting) paintProspecting(floor.prospecting);
     }
 
-    function paintProspecting(agent) {
-      document.querySelector("#prospecting-slot").innerHTML = personCard(agent);
-      document.querySelector("#prospecting-report").textContent = agent.report || "";
+    function paintProspecting(step) {
+      document.querySelector("#prospecting-slot").innerHTML = stepCard(step);
+      document.querySelector("#prospecting-report").textContent = step.report || "";
       const button = document.querySelector("#start-prospecting");
-      button.disabled = agent.state === "working";
-      button.textContent = agent.state === "working" ? "Buscando" : "Arrancar prospección";
+      button.disabled = step.state === "working";
+      button.textContent = step.state === "working" ? "Buscando" : "Arrancar prospección";
     }
 
     document.querySelector("#start-prospecting").addEventListener("click", async () => {
@@ -418,15 +406,18 @@
       paintProspecting(body);
     });
 
-    function personCard(agent) {
-      const where = agent.stuckAt
-        ? "<p class='where'>" + (agent.state === "stuck" ? "Trabado en: " : "Incendio: ") + escapeHtml(agent.stuckAt) + "</p>"
+    const pauseMark = "<svg class='mark' viewBox='0 0 24 24' aria-hidden='true'><rect x='6' y='4' width='4.5' height='16' rx='1'/><rect x='13.5' y='4' width='4.5' height='16' rx='1'/></svg>";
+    const runMark = "<svg class='mark' viewBox='0 0 24 24' aria-hidden='true'><path d='M8 5v14l11-7z'/></svg>";
+
+    function stepCard(step) {
+      const where = step.stuckAt
+        ? "<p class='where'>Trabado en: " + escapeHtml(step.stuckAt) + "</p>"
         : "";
-      return "<button type='button' class='person " + agent.state + "' data-agent='" + agent.id + "' aria-pressed='false'>" +
-        "<span class='figure' aria-hidden='true'><span class='head'></span><span class='body'></span></span>" +
-        "<strong>" + escapeHtml(agent.name) + "</strong>" +
-        "<span class='state'>" + escapeHtml(agentStateName[agent.state] || agent.state) + "</span>" +
-        "<p>" + escapeHtml(agent.doing) + "</p>" + where + "</button>";
+      return "<div class='step " + step.state + "' data-step='" + step.id + "'>" +
+        (step.state === "working" ? runMark : pauseMark) +
+        "<strong>" + escapeHtml(step.name) + "</strong>" +
+        "<span class='state'>" + escapeHtml(stepStateName[step.state] || step.state) + "</span>" +
+        "<p>" + escapeHtml(step.doing) + "</p>" + where + "</div>";
     }
 
     const statusName = {
@@ -663,11 +654,11 @@
     });
 
     const events = new EventSource("/api/events");
-    events.onmessage = () => { refresh(); refreshAgents(); };
+    events.onmessage = () => { refresh(); refreshSteps(); };
     refresh();
     refreshKeys();
-    refreshAgents();
-    setInterval(refreshAgents, 5000);
+    refreshSteps();
+    setInterval(refreshSteps, 5000);
   </script>
 </body>
 </html>

@@ -5,12 +5,12 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
-/** Runs the prospecting agent on its own. The campaign loop does not call this. */
-export function runProspectingAgent(): Promise<string> {
+/** Runs prospecting on its own. The campaign loop does not call this. */
+export function runProspecting(): Promise<string> {
   const venvPython = resolve(root, ".venv/bin/python");
   const python = existsSync(venvPython) ? venvPython : "python3";
   return new Promise((resolvePromise, reject) => {
-    const child = spawn(python, ["-m", "agents.prospecting"], { cwd: root, env: process.env });
+    const child = spawn(python, ["-m", "steps.prospecting"], { cwd: root, env: process.env });
     let out = "";
     const timer = setTimeout(() => {
       child.kill();

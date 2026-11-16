@@ -1,7 +1,7 @@
 import { loadEnvFile, projectEnvPath } from "../config/load-env.ts";
 import type { Phase1Module } from "../types.ts";
 
-export const hubspotAgent = {
+export const hubspotStep = {
   id: "hubspot",
   phaseImplemented: 1,
   summary:

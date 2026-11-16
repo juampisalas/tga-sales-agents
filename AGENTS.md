@@ -1,6 +1,6 @@
 # TGA AI Sales Commander
 
-Este proyecto interpreta pedidos de prospección en español y los ejecuta con los agentes de TGA. La ejecución es una máquina de estados guardada en SQLite.
+Este proyecto interpreta pedidos de prospección en español y los ejecuta por pasos. La ejecución es una máquina de estados guardada en SQLite.
 
 ## Reglas
 
@@ -14,6 +14,6 @@ Este proyecto interpreta pedidos de prospección en español y los ejecuta con l
 - Si no hay suficientes resultados, el reporte dice cuántos se consiguieron.
 - No inventes contactos, empresas ni IDs de HubSpot.
 - `.cursor/mcp.json` se mantiene con `npx @playwright/mcp@latest --extension`.
-- Una sola `OPENAI_API_KEY` en `.env`. Todos los agentes la usan desde `shared/openai_client.py`.
-- El modelo de cada agente está en `config.py`. Cambiar el modelo no cambia la clave ni la facturación.
+- Una sola `OPENAI_API_KEY` en `.env`. Prospección la usa desde `shared/openai_client.py`.
+- El modelo de prospección está en `config.py`. Cambiar el modelo no cambia la clave ni la facturación.
 - `.env` queda en `.gitignore`. No se pega ninguna clave en el chat ni en el código.

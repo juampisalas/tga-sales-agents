@@ -2,7 +2,7 @@ from config import MODELS
 from shared.openai_client import client as shared_client
 
 
-class Agent:
+class Step:
     name = ""
     instructions = ""
 

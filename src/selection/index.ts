@@ -3,7 +3,7 @@ import type { Phase1Module } from "../types.ts";
 /** Brief limit. Selection itself is not implemented. */
 export const MAX_BATCH = 25;
 
-export const selectionAgent = {
+export const selectionStep = {
   id: "selection",
   phaseImplemented: 1,
   summary: `Select up to ${MAX_BATCH} contacts per batch, skip already processed, confirm the count. Stub only.`,

@@ -56,17 +56,18 @@ test("el panel muestra el chat y los controles", async () => {
     assert.match(html, /Guardar claves/);
     assert.match(html, /id="openai-connected"/);
     assert.match(html, /Conectada/);
-    assert.match(html, /id="agent-floor"/);
-    assert.match(html, /El supervisor está arriba/);
+    assert.match(html, /id="step-floor"/);
+    assert.match(html, /<h2>Pasos<\/h2>/);
+    assert.doesNotMatch(html, /supervisor/i);
     assert.match(html, /Por su cuenta/);
     assert.match(html, /id="start-prospecting"/);
     assert.match(html, /Arrancar prospección/);
-    const agents = await fetch(`${server.base}/api/agents`);
-    const floor = await agents.json() as { supervisor: { id: string }; agents: { id: string }[]; prospecting: { id: string } };
-    assert.equal(agents.status, 200);
-    assert.equal(floor.supervisor.id, "supervisor");
+    const steps = await fetch(`${server.base}/api/steps`);
+    const floor = await steps.json() as { steps: { id: string }[]; prospecting: { id: string } };
+    assert.equal(steps.status, 200);
     assert.equal(floor.prospecting.id, "prospecting");
-    assert.deepEqual(floor.agents.map((agent) => agent.id), [
+    assert.equal(JSON.stringify(floor).includes("supervisor"), false);
+    assert.deepEqual(floor.steps.map((step) => step.id), [
       "navigator",
       "selection",
       "surfe",
@@ -87,8 +88,8 @@ test("arrancar prospección no mezcla su resultado con la lista diaria", async (
     assert.equal(body.id, "prospecting");
     assert.equal(body.state, "done");
     assert.equal(body.report, "No hay señal todavía.");
-    const floor = await (await fetch(`${server.base}/api/agents`)).json() as { agents: { id: string }[]; prospecting: { report: string } };
-    assert.equal(floor.agents.some((agent) => agent.id === "prospecting"), false);
+    const floor = await (await fetch(`${server.base}/api/steps`)).json() as { steps: { id: string }[]; prospecting: { report: string } };
+    assert.equal(floor.steps.some((step) => step.id === "prospecting"), false);
     assert.equal(floor.prospecting.report, "No hay señal todavía.");
   } finally {
     await server.close();
@@ -160,11 +161,11 @@ test("sin extensión bloquea el panel y la API", async () => {
     const html = await response.text();
     assert.match(html, /Instalá Playwright para entrar/);
     assert.match(html, /chromewebstore.google.com/);
-    assert.doesNotMatch(html, /id="agent-floor"/);
+    assert.doesNotMatch(html, /id="step-floor"/);
     assert.equal(response.headers.get("cache-control"), "no-store");
     const status = await fetch(server.base + "/api/extension");
     assert.deepEqual(await status.json(), { ok: false });
-    for (const path of ["/api/state", "/api/agents", "/api/events", "/api/interpret"]) {
+    for (const path of ["/api/state", "/api/steps", "/api/events", "/api/interpret"]) {
       const blocked = await fetch(server.base + path, { method: path === "/api/interpret" ? "POST" : "GET" });
       assert.equal(blocked.status, 403);
       assert.equal((await blocked.json()).code, "PLAYWRIGHT_EXTENSION_REQUIRED");

@@ -1,6 +1,6 @@
 import type { Phase1Module } from "../types.ts";
 
-export const qualificationAgent = {
+export const qualificationStep = {
   id: "qualification",
   phaseImplemented: 1,
   summary:

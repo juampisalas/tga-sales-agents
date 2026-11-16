@@ -1,6 +1,6 @@
 import type { Phase1Module } from "../types.ts";
 
-export const navigatorAgent = {
+export const navigatorStep = {
   id: "navigator",
   phaseImplemented: 1,
   summary:

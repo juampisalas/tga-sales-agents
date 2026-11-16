@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 import type { DefaultConfig } from "../config/defaults.ts";
 import { projectEnvPath, saveApiKeys } from "../config/load-env.ts";
 import { probeCredentials, type CredentialLinks } from "../config/probe-credentials.ts";
-import { agentFloor, idleProspecting, surfeHandoffLogPath, type AgentPost } from "../dashboard/agent-floor.ts";
-import { runProspectingAgent } from "../prospecting/run.ts";
+import { stepFloor, idleProspecting, surfeHandoffLogPath, type StepPost } from "../dashboard/step-floor.ts";
+import { runProspecting } from "../prospecting/run.ts";
 import { Orchestrator, type BrowserGate } from "../campaign/orchestrator.ts";
 import { CampaignStore } from "../campaign/store.ts";
 
@@ -28,7 +28,7 @@ export function createDashboard(
     env: NodeJS.ProcessEnv;
     probe?: (env: NodeJS.ProcessEnv) => Promise<CredentialLinks>;
   } = { path: projectEnvPath, env: process.env },
-  prospectingRun: () => Promise<string> = runProspectingAgent,
+  prospectingRun: () => Promise<string> = runProspecting,
 ): Dashboard {
   const probe = credentials.probe ?? ((env: NodeJS.ProcessEnv) => probeCredentials(env));
   let prospecting = idleProspecting();
@@ -82,14 +82,14 @@ export function createDashboard(
       if (req.method === "GET" && url.pathname === "/api/state") {
         return sendJson(res, 200, orchestrator.snapshot());
       }
-      if (req.method === "GET" && url.pathname === "/api/agents") {
+      if (req.method === "GET" && url.pathname === "/api/steps") {
         let log = "";
         try {
           log = readFileSync(surfeHandoffLogPath, "utf8");
         } catch {
           log = "";
         }
-        return sendJson(res, 200, { ...agentFloor(log), prospecting: prospectingView() });
+        return sendJson(res, 200, { ...stepFloor(log), prospecting: prospectingView() });
       }
       if (req.method === "POST" && url.pathname === "/api/prospecting/start") {
         if (prospecting.state !== "working") {
@@ -173,7 +173,7 @@ export function createDashboard(
       sendJson(res, 400, { error: message });
     }
   });
-  function prospectingView(): AgentPost & { report: string } {
+  function prospectingView(): StepPost & { report: string } {
     return { ...prospecting, report: prospectingReport };
   }
 

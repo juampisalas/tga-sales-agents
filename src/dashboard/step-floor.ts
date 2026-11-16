@@ -1,11 +1,15 @@
 export const surfeHandoffLogPath = "/tmp/tga-segment-handoff.log";
+export const listReloadMark = "recarga la lista:";
+export const listReloadFailedMark = "no pudo recargar:";
+export const syncResumeMark = "reanuda la sincronización:";
+export const syncResumeFailedMark = "no pudo reanudar:";
 
-export type AgentState = "working" | "waiting" | "stuck" | "idle" | "done";
+export type StepState = "working" | "waiting" | "stuck" | "idle" | "done";
 
-export type AgentPost = {
-  id: "navigator" | "selection" | "surfe" | "hubspot" | "qualification" | "prospecting" | "supervisor";
+export type StepPost = {
+  id: "navigator" | "selection" | "surfe" | "hubspot" | "qualification" | "prospecting";
   name: string;
-  state: AgentState;
+  state: StepState;
   doing: string;
   stuckAt: string | null;
 };
@@ -13,10 +17,9 @@ export type AgentPost = {
 const STALL_MS = 60_000;
 const RELOAD_MS = 3 * 60_000;
 
-export function agentFloor(log: string, now = Date.now()): {
-  supervisor: AgentPost;
-  agents: AgentPost[];
-  stuck: AgentPost | null;
+export function stepFloor(log: string, now = Date.now()): {
+  steps: StepPost[];
+  stuck: StepPost | null;
 } {
   const progress = progressSamples(log);
   const interventionAt = lastIntervention(log);
@@ -38,17 +41,20 @@ export function agentFloor(log: string, now = Date.now()): {
   const gaveUp = /No se creó el segmento/.test(log);
   const lines = log.split("\n").map((line) => line.trim()).filter(Boolean);
   const lastLine = lines.at(-1) ?? "";
-  const supervisorBroken = /Command failed|missing|error/i.test(lastLine) && !/Syncing to HubSpot/.test(lastLine);
+  const readFailed = /Command failed|missing|error/i.test(lastLine) && !/Syncing to HubSpot/.test(lastLine);
 
-  const surfe: AgentPost = !last
+  let surfe: StepPost = !last
     ? post("surfe", "Surfe", "idle", "No hay una sincronización a HubSpot.", null)
     : finished
       ? post("surfe", "Surfe", "done", `Terminó ${last.synced} de ${last.total}.`, null)
       : stalled
         ? post("surfe", "Surfe", "stuck", "Sincroniza la lista con HubSpot.", `${last.raw} no avanza.`)
         : post("surfe", "Surfe", "working", "Sincroniza la lista con HubSpot.", null);
+  if (readFailed && surfe.state !== "done" && surfe.state !== "stuck") {
+    surfe = post("surfe", "Surfe", "stuck", "Sincroniza la lista con HubSpot.", "No pudo leer la pestaña de Surfe.");
+  }
 
-  const hubspot: AgentPost = verified
+  const hubspot: StepPost = verified
     ? post("hubspot", "HubSpot", "done", "Metió los contactos de esta carga en el segmento.", null)
     : rejected || gaveUp
       ? post("hubspot", "HubSpot", "stuck", "Iba a armar el segmento 05/11/2026 Argentina.", "La carga no quedó verificada.")
@@ -56,7 +62,7 @@ export function agentFloor(log: string, now = Date.now()): {
         ? post("hubspot", "HubSpot", "working", "Arma el segmento 05/11/2026 Argentina.", null)
         : post("hubspot", "HubSpot", "waiting", "Espera a que Surfe cierre el conteo.", null);
 
-  const agents: AgentPost[] = [
+  const steps: StepPost[] = [
     post(
       "navigator",
       "Navigator",
@@ -75,12 +81,8 @@ export function agentFloor(log: string, now = Date.now()): {
     hubspot,
     post("qualification", "Calificación", "idle", "Todavía no califica contactos.", null),
   ];
-  const workerStuck = agents.find((agent) => agent.state === "stuck") ?? null;
-  const reloaded = Boolean(last && log.includes(`supervisor recarga la lista: ${last.raw}`));
-  const resumed = Boolean(last && log.includes(`supervisor reanuda la sincronización: ${last.raw}`));
-  const supervisor = supervisorPost(supervisorBroken, workerStuck, reloaded, resumed, Boolean(last));
-  const stuck = workerStuck ?? (supervisor.state === "stuck" ? supervisor : null);
-  return { supervisor, agents, stuck };
+  const stuck = steps.find((step) => step.state === "stuck") ?? null;
+  return { steps, stuck };
 }
 
 export function surfeResumeNeeded(log: string, visibleLine: string, now = Date.now()): string | null {
@@ -91,29 +93,29 @@ export function surfeResumeNeeded(log: string, visibleLine: string, now = Date.n
   if (signature) {
     return null;
   }
-  const floor = agentFloor(log, now);
-  const surfe = floor.agents.find((agent) => agent.id === "surfe");
+  const floor = stepFloor(log, now);
+  const surfe = floor.steps.find((step) => step.id === "surfe");
   if (surfe?.state !== "stuck" || !surfe.stuckAt) {
     return null;
   }
   const stalled = surfe.stuckAt.replace(/ no avanza\.$/, "");
-  if (!log.includes(`supervisor recarga la lista: ${stalled}`)) {
+  if (!log.includes(`${listReloadMark} ${stalled}`)) {
     return null;
   }
-  if (log.includes(`supervisor reanuda la sincronización: ${stalled}`) || log.includes(`supervisor no pudo reanudar: ${stalled}`)) {
+  if (log.includes(`${syncResumeMark} ${stalled}`) || log.includes(`${syncResumeFailedMark} ${stalled}`)) {
     return null;
   }
   return stalled;
 }
 
 export function surfeReloadNeeded(log: string, now = Date.now()): string | null {
-  const floor = agentFloor(log, now);
-  const surfe = floor.agents.find((agent) => agent.id === "surfe");
+  const floor = stepFloor(log, now);
+  const surfe = floor.steps.find((step) => step.id === "surfe");
   if (surfe?.state !== "stuck" || !surfe.stuckAt || stallAge(log, now) < RELOAD_MS) {
     return null;
   }
   const signature = surfe.stuckAt.replace(/ no avanza\.$/, "");
-  if (log.includes(`supervisor recarga la lista: ${signature}`) || log.includes(`supervisor no pudo recargar: ${signature}`)) {
+  if (log.includes(`${listReloadMark} ${signature}`) || log.includes(`${listReloadFailedMark} ${signature}`)) {
     return null;
   }
   return signature;
@@ -135,7 +137,7 @@ function stallAge(log: string, now: number): number {
 function lastIntervention(log: string): number | null {
   let at: number | null = null;
   for (const line of log.split("\n")) {
-    if (!/supervisor recarga la lista:|supervisor reanuda la sincronización:/.test(line)) {
+    if (!line.includes(listReloadMark) && !line.includes(syncResumeMark)) {
       continue;
     }
     const time = line.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);
@@ -146,25 +148,7 @@ function lastIntervention(log: string): number | null {
   return at;
 }
 
-function supervisorPost(broken: boolean, fire: AgentPost | null, reloaded: boolean, resumed: boolean, watching: boolean): AgentPost {
-  if (broken) {
-    return post("supervisor", "Supervisor", "stuck", "Se fija que el resto esté laburando.", "No pudo leer la pestaña de Surfe.");
-  }
-  if (fire?.stuckAt) {
-    const doing = resumed
-      ? `Reanudó la sincronización de ${fire.name}.`
-      : reloaded
-        ? `Recargó la lista de ${fire.name} y el conteo sigue igual.`
-        : `Apaga el incendio de ${fire.name}.`;
-    return post("supervisor", "Supervisor", "working", doing, fire.stuckAt);
-  }
-  if (watching) {
-    return post("supervisor", "Supervisor", "working", "Se fija que los que tienen trabajo estén laburando.", null);
-  }
-  return post("supervisor", "Supervisor", "idle", "No hay incendios.", null);
-}
-
-export function idleProspecting(): AgentPost {
+export function idleProspecting(): StepPost {
   return post(
     "prospecting",
     "Prospección",
@@ -174,14 +158,19 @@ export function idleProspecting(): AgentPost {
   );
 }
 
-function post(id: AgentPost["id"], name: string, state: AgentState, doing: string, stuckAt: string | null): AgentPost {
+function post(id: StepPost["id"], name: string, state: StepState, doing: string, stuckAt: string | null): StepPost {
   return { id, name, state, doing, stuckAt };
 }
 
 function progressSamples(log: string): { at: number; synced: number; total: number; raw: string }[] {
   const samples = [];
   for (const line of log.split("\n")) {
-    if (line.includes("supervisor ")) {
+    if (
+      line.includes(listReloadMark) ||
+      line.includes(listReloadFailedMark) ||
+      line.includes(syncResumeMark) ||
+      line.includes(syncResumeFailedMark)
+    ) {
       continue;
     }
     const time = line.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);

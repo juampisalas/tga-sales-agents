@@ -1,9 +1,9 @@
 from shared.openai_client import client
 
-from agents.base import Agent
+from steps.base import Step
 
 
-class Prospecting(Agent):
+class Prospecting(Step):
     name = "prospecting"
     instructions = (
         "Trabajás por tu cuenta, aparte de la lista diaria de Sales Navigator. "

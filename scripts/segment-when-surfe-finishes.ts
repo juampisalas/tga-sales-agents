@@ -2,7 +2,15 @@ import { appendFileSync, readFileSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { segmentWhenSurfeFinishes } from "../src/campaign/hubspot-transfer.ts";
-import { surfeHandoffLogPath, surfeReloadNeeded, surfeResumeNeeded } from "../src/dashboard/agent-floor.ts";
+import {
+  listReloadFailedMark,
+  listReloadMark,
+  surfeHandoffLogPath,
+  surfeReloadNeeded,
+  surfeResumeNeeded,
+  syncResumeFailedMark,
+  syncResumeMark,
+} from "../src/dashboard/step-floor.ts";
 
 const exec = promisify(execFile);
 const since = "2026-11-05T17:15:00.000Z";
@@ -124,18 +132,18 @@ while (Date.now() < deadline) {
   if (signature) {
     try {
       const reloaded = await reloadSurfeList();
-      log(reloaded === "ok" ? `supervisor recarga la lista: ${signature}` : `supervisor no pudo recargar: ${signature}`);
+      log(reloaded === "ok" ? `${listReloadMark} ${signature}` : `${listReloadFailedMark} ${signature}`);
     } catch {
-      log(`supervisor no pudo recargar: ${signature}`);
+      log(`${listReloadFailedMark} ${signature}`);
     }
   }
   const resume = surfeResumeNeeded(readFileSync(logPath, "utf8"), line);
   if (resume) {
     try {
       const clicked = await resumeSurfeSync();
-      log(clicked === "clicked" ? `supervisor reanuda la sincronización: ${resume}` : `supervisor no pudo reanudar: ${resume}`);
+      log(clicked === "clicked" ? `${syncResumeMark} ${resume}` : `${syncResumeFailedMark} ${resume}`);
     } catch {
-      log(`supervisor no pudo reanudar: ${resume}`);
+      log(`${syncResumeFailedMark} ${resume}`);
     }
   }
   const done = finished(line);

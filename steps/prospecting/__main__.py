@@ -1,4 +1,4 @@
-from agents.prospecting.agent import prospecting
+from steps.prospecting.step import prospecting
 
 
 def main() -> None:

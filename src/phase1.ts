@@ -1,10 +1,9 @@
-import { hubspotAgent } from "./hubspot/index.ts";
-import { navigatorAgent } from "./navigator/index.ts";
+import { hubspotStep } from "./hubspot/index.ts";
+import { navigatorStep } from "./navigator/index.ts";
 import { PERSISTENCE_STATUS } from "./persistence/sqlite.ts";
-import { qualificationAgent } from "./qualification/index.ts";
-import { selectionAgent } from "./selection/index.ts";
-import { supervisorAgent } from "./supervisor/index.ts";
-import { surfeAgent, surfeImportTest } from "./surfe/index.ts";
+import { qualificationStep } from "./qualification/index.ts";
+import { selectionStep } from "./selection/index.ts";
+import { surfeStep, surfeImportTest } from "./surfe/index.ts";
 
 export const PHASE = 1 as const;
 
@@ -12,12 +11,11 @@ export function phase1Status() {
   return {
     phase: PHASE,
     modules: [
-      navigatorAgent,
-      selectionAgent,
-      surfeAgent,
-      hubspotAgent,
-      qualificationAgent,
-      supervisorAgent,
+      navigatorStep,
+      selectionStep,
+      surfeStep,
+      hubspotStep,
+      qualificationStep,
     ],
     persistence: PERSISTENCE_STATUS,
     surfeImportTest,

@@ -8,7 +8,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 
 class SharedClient:
-    """One OpenAI client for every agent. The API key stays in .env."""
+    """One OpenAI client. The API key stays in .env."""
 
     def __init__(self) -> None:
         self._client: OpenAI | None = None
